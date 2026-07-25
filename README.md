@@ -9,24 +9,17 @@
 - 청원 페이지는 대한민국 정부의 국민동의청원과 무관한 **비공식** 페이지이며 법적
   효력이 없습니다.
 
-## ⚠️ 지금 사이트에 접속하면 "firebase-config.js가 없습니다"라고 뜨는 이유
+## Firebase 연결 상태
 
-자유게시판·투표·청원은 여러 사람이 같이 보는 데이터라서 브라우저 저장(localStorage)
-만으로는 만들 수 없고, 공유 데이터베이스(Firestore)가 필요합니다. 코드는 이미 전부
-완성되어 있고, **딱 하나** — Firebase 프로젝트를 연결하는 것만 남았습니다.
+Firebase 프로젝트 연결(`firebase-config.js`)과 보안 규칙 게시는 완료되었습니다.
+**아직 남은 것 — 관리자 계정 설정** (투표를 앱 안에서 직접 만들려면 필요):
 
-이 연결 과정은 본인 Google 계정으로 로그인해서 진행해야 하는 부분이라 자동화(=제3자가
-대신 처리)가 불가능합니다. 약 10분 정도 걸리는 아래 단계를 따라주세요.
+1. Firebase 콘솔 → Authentication → Sign-in method → **이메일/비밀번호** 활성화
+2. Authentication → Users → **사용자 추가** (원하는 이메일 + 비밀번호)
+3. `firestore.rules`의 `"ADMIN_EMAIL_PLACEHOLDER"`를 그 이메일로 교체하고 다시 게시
+4. `vote.html` 상단 "관리자" 카드에서 그 이메일/비밀번호로 로그인
 
-**👉 전체 안내: [SETUP.md](SETUP.md)**
-
-요약하면:
-1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트 생성
-2. Firestore Database 활성화 (Production 모드)
-3. Authentication → 익명(Anonymous) 로그인 활성화
-4. 웹 앱 등록 → 설정값을 `firebase-config.js`에 붙여넣기 (`firebase-config.js.example` 참고)
-5. `firestore.rules` 내용을 Firestore 콘솔의 Rules 탭에 붙여넣고 게시
-6. (선택) 투표 첫 항목을 `polls` 컬렉션에 직접 등록
+자세한 안내: **[SETUP.md](SETUP.md)** (6번 항목)
 
 완료 후 `git push`하면 그대로 라이브 사이트에 반영됩니다.
 

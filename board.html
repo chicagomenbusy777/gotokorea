@@ -33,7 +33,9 @@
   <div id="boardView" style="display:flex; flex-direction:column; gap:18px;">
     <div class="filter-pills" id="categoryFilters"></div>
 
-    <div class="glass card">
+    <div class="banner" id="banNotice" style="display:none;">신고가 5건 이상 누적되어 글쓰기·댓글이 제한되었습니다. 이의가 있으시면 운영자에게 문의해주세요.</div>
+
+    <div class="glass card" id="newPostFormCard">
       <h3>새 글 작성</h3>
       <div class="form-col" id="newPostForm">
         <input type="text" id="postTitle" placeholder="제목" maxlength="120">

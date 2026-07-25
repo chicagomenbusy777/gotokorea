@@ -22,6 +22,8 @@
     list: document.getElementById("postList"),
     ccpBanner: document.getElementById("ccpBanner"),
     newForm: document.getElementById("newPostForm"),
+    newFormCard: document.getElementById("newPostFormCard"),
+    banNotice: document.getElementById("banNotice"),
     title: document.getElementById("postTitle"),
     body: document.getElementById("postBody"),
     submitBtn: document.getElementById("submitPostBtn"),
@@ -36,6 +38,23 @@
     commentBtn: document.getElementById("commentBtn"),
     boardView: document.getElementById("boardView")
   };
+
+  let isBanned = false;
+
+  function applyBanState(){
+    if(!els.banNotice) return;
+    els.banNotice.style.display = isBanned ? "block" : "none";
+    if(els.newFormCard) els.newFormCard.style.display = isBanned ? "none" : "block";
+    if(els.commentBtn) els.commentBtn.disabled = isBanned;
+    if(els.commentInput) els.commentInput.disabled = isBanned;
+  }
+
+  function checkBanStatus(uid){
+    return db.collection("userStats").doc(uid).get().then(function(doc){
+      isBanned = doc.exists && Number(doc.data().reportCount || 0) >= 5;
+      applyBanState();
+    }).catch(function(err){ console.error(err); });
+  }
 
   function renderPills(){
     if(!els.pills) return;
@@ -118,6 +137,12 @@
           authorNickname: getNickname(),
           authorUid: user.uid,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){
+          // Bumps this user's post count (see vote.js: voting requires 10+ posts).
+          return db.collection("userStats").doc(user.uid).set({
+            postCount: firebase.firestore.FieldValue.increment(1),
+            reportCount: firebase.firestore.FieldValue.increment(0)
+          }, { merge: true });
         });
       }).then(function(){
         els.title.value = "";
@@ -133,9 +158,11 @@
   }
 
   let currentPostId = null;
+  let currentPostAuthorUid = null;
 
   function showDetail(postId){
     currentPostId = postId;
+    currentPostAuthorUid = null;
     els.boardView.style.display = "none";
     els.detail.style.display = "flex";
     els.detailTitle.textContent = "불러오는 중...";
@@ -145,6 +172,7 @@
     db.collection("posts").doc(postId).get().then(function(doc){
       if(!doc.exists){ els.detailTitle.textContent = "삭제되었거나 존재하지 않는 게시글입니다."; return; }
       const p = doc.data();
+      currentPostAuthorUid = p.authorUid;
       els.detailTitle.textContent = p.title;
       els.detailMeta.textContent = (p.authorNickname||"익명") + " · " + fmtDate(p.createdAt);
       els.detailBody.textContent = p.body;
@@ -202,16 +230,25 @@
 
   if(els.detailReport){
     els.detailReport.addEventListener("click", function(){
-      if(!currentPostId) return;
+      if(!currentPostId || !currentPostAuthorUid) return;
       const reason = prompt("신고 사유를 간단히 적어주세요 (운영자가 검토합니다)");
       if(!reason || !reason.trim()) return;
+      const targetAuthorUid = currentPostAuthorUid;
       authReady.then(function(user){
         return db.collection("reports").add({
           targetType: "post",
           targetId: currentPostId,
+          targetAuthorUid: targetAuthorUid,
           reason: reason.trim().slice(0,500),
           reporterUid: user.uid,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){
+          // 5+ accumulated reports blocks that author from posting further
+          // (enforced server-side in firestore.rules; this just tallies it).
+          return db.collection("userStats").doc(targetAuthorUid).set({
+            reportCount: firebase.firestore.FieldValue.increment(1),
+            postCount: firebase.firestore.FieldValue.increment(0)
+          }, { merge: true });
         });
       }).then(function(){
         toast("신고가 접수되었습니다");
@@ -227,10 +264,11 @@
     if(m) showDetail(m[1]); else hideDetail();
   });
 
-  authReady.then(function(){
+  authReady.then(function(user){
     renderPills();
     renderCcpBanner();
     loadPosts();
+    checkBanStatus(user.uid);
     const m = location.hash.match(/^#post-(.+)$/);
     if(m) showDetail(m[1]);
   });

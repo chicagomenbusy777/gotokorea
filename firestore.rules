@@ -1,6 +1,12 @@
 rules_version = '2';
 // GotoKorea Firestore security rules — v1.
 //
+// >>> SET THIS to the email of the one admin account you create in
+// Firebase console → Authentication (see SETUP.md "Admin account" step).
+// Everyone else authenticates anonymously, so checking the signed-in
+// user's email is enough to gate admin-only actions without needing
+// custom claims / Cloud Functions.
+//
 // NOTE on rate limiting: true server-enforced rate limiting (e.g. "max 1
 // post per 30s per user") would need either a per-user `rateLimits/{uid}`
 // document checked against `request.time` on every write, or Cloud
@@ -9,6 +15,13 @@ rules_version = '2';
 // soft cooldown, but a determined abuser could bypass it — moderate via
 // the Firebase console (delete offending docs) and revisit if abuse shows
 // up. See SETUP.md.
+//
+// NOTE on userStats: postCount only increments through the app's own
+// post-creation code path, and nothing here cryptographically proves a
+// given increment came from a real post — a technically sophisticated
+// user could call the same increment write directly. Real tamper-proofing
+// would need a Cloud Functions trigger on posts/{postId} onCreate. Good
+// enough for v1's threat model (casual abuse, not a determined attacker).
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -17,14 +30,62 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == "ADMIN_EMAIL_PLACEHOLDER";
+    }
+
     function withinLength(field, maxLen) {
       return field is string && field.size() > 0 && field.size() <= maxLen;
+    }
+
+    function statsOf(uid) {
+      return get(/databases/$(database)/documents/userStats/$(uid)).data;
+    }
+
+    function hasStats(uid) {
+      return exists(/databases/$(database)/documents/userStats/$(uid));
+    }
+
+    function postCountOf(uid) {
+      return hasStats(uid) ? statsOf(uid).postCount : 0;
+    }
+
+    function reportCountOf(uid) {
+      return hasStats(uid) ? statsOf(uid).reportCount : 0;
+    }
+
+    function notBanned(uid) {
+      return reportCountOf(uid) < 5;
+    }
+
+    // ---------- Per-user stats: post count (for the vote gate) and
+    // report count (for the posting ban). One doc per uid. ----------
+    match /userStats/{uid} {
+      allow read: if true;
+      // Self: only the post-creation path increments postCount, by exactly 1,
+      // and never touches reportCount.
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.postCount == 1
+        && request.resource.data.reportCount == 0;
+      allow update: if isSignedIn() && (
+        (request.auth.uid == uid
+          && request.resource.data.postCount == resource.data.postCount + 1
+          && request.resource.data.reportCount == resource.data.reportCount)
+        ||
+        // Anyone else: only the report-creation path increments reportCount,
+        // by exactly 1, and never touches postCount.
+        (request.auth.uid != uid
+          && request.resource.data.reportCount == resource.data.reportCount + 1
+          && request.resource.data.postCount == resource.data.postCount)
+      );
+      allow delete: if false;
     }
 
     // ---------- Posts (자유게시판 + 시사/정치 + CCP corner) ----------
     match /posts/{postId} {
       allow read: if true;
       allow create: if isSignedIn()
+        && notBanned(request.auth.uid)
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.category in ['free', 'issues', 'ccp']
         && withinLength(request.resource.data.title, 120)
@@ -37,6 +98,7 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if isSignedIn()
+          && notBanned(request.auth.uid)
           && request.resource.data.authorUid == request.auth.uid
           && withinLength(request.resource.data.body, 1000)
           && withinLength(request.resource.data.authorNickname, 30)
@@ -50,21 +112,24 @@ service cloud.firestore {
       allow read: if false;
       allow create: if isSignedIn()
         && request.resource.data.reporterUid == request.auth.uid
+        && withinLength(request.resource.data.targetAuthorUid, 128)
         && withinLength(request.resource.data.reason, 500);
       allow update, delete: if false;
     }
 
-    // ---------- Polls (curated by the site owner directly in the console) ----------
+    // ---------- Polls (curated in-app by the one admin account) ----------
     match /polls/{pollId} {
       allow read: if true;
-      allow write: if false;
+      allow create, update: if isAdmin();
+      allow delete: if false;
     }
 
     match /votes/{voteId} {
       allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
       allow create: if isSignedIn()
         && request.resource.data.uid == request.auth.uid
-        && voteId == request.resource.data.pollId + '_' + request.auth.uid;
+        && voteId == request.resource.data.pollId + '_' + request.auth.uid
+        && postCountOf(request.auth.uid) >= 10;
       allow update, delete: if false;
     }
 

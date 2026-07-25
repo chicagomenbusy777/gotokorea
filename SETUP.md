@@ -71,34 +71,55 @@ Without this step, Firestore's default rules will block all reads/writes
 write anything (unsafe) — publishing `firestore.rules` is what makes the
 site both usable and moderately abuse-resistant.
 
-## 6. Add your first poll (curated, no live API needed)
+## 6. Create the admin account (needed to create polls in-app)
 
-Polls are added directly in the console since there's no X/Instagram API
-wired up:
+Polls are now created from `vote.html` itself (no more console data-entry)
+— but only one account is allowed to do that, checked by email in
+`firestore.rules`.
 
-1. **Build → Firestore Database → Data → Start collection** → `polls`.
-2. Add a document (auto-ID) with fields:
-   - `title` (string): e.g. "이번 주 가장 관심있는 이슈는?"
-   - `description` (string, optional)
-   - `active` (boolean): `true`
-   - `createdAt` (timestamp): now
-   - `options` (map): e.g.
-     ```
-     optA: { label: "옵션 A", votes: 0 }
-     optB: { label: "옵션 B", votes: 0 }
-     ```
-3. It'll appear on `vote.html` immediately.
+1. **Build → Authentication → Sign-in method** → enable **Email/Password**.
+2. **Authentication → Users → Add user** → pick any email + password you'll
+   remember (this doesn't need to be a real inbox — it's just a login, not
+   used for email delivery).
+3. Open `firestore.rules` in this repo and replace
+   `"ADMIN_EMAIL_PLACEHOLDER"` (inside the `isAdmin()` function near the
+   top) with that exact email, in quotes. Example:
+   ```
+   return isSignedIn() && request.auth.token.email == "you@example.com";
+   ```
+4. Re-publish the rules: **Firestore Database → Rules** tab → paste the
+   updated file → **Publish** (same as step 5, just with your email filled in).
+5. On `vote.html`, log in with that email/password in the "관리자" card at
+   the top — a "새 투표 만들기" form appears. Everyone else only ever sees
+   the regular anonymous voting UI; there's no admin login link exposed
+   anywhere else, but the card is visible on the page since there's no
+   good way to hide it before auth resolves — that's fine, it's useless to
+   anyone without your password, and the real gate is the security rule.
 
-## 7. Deploy
+## 7. How the new limits work (nothing to set up — just context)
+
+- **Voting requires 10+ posts.** A `userStats/{uid}` doc tracks each
+  user's post count, and `firestore.rules` blocks vote-casting below 10.
+  This is enforced server-side, not just hidden in the UI.
+- **5+ reports blocks posting.** The report button now also tallies a
+  `reportCount` on the *reported post's author*, and `firestore.rules`
+  rejects new posts/comments once that hits 5. There's no in-app appeal
+  flow yet — if someone's wrongly banned, you'd currently need to edit
+  their `userStats/{uid}` doc's `reportCount` back down in the console.
+- Neither counter is retroactive — only posts/reports made after this
+  update count.
+
+## 8. Deploy
 
 Same as mindcareapp: push to `main`, enable GitHub Pages (Settings → Pages
 → Deploy from branch → `main` / root) if not already on.
 
-## 8. Optional hardening (v2 ideas, not required to launch)
+## 9. Optional hardening (v2 ideas, not required to launch)
 
 - **Firebase App Check** — reduces abuse from scripted/bot traffic hitting
   your Firestore directly. Free, a bit more setup (reCAPTCHA v3 site key).
-- **Cloud Functions** for real rate limiting and an in-app admin/moderation
-  panel instead of moderating via the console — needs the Blaze
-  (pay-as-you-go) plan, though usage at small scale is normally still
-  within the free tier's usage-based allowance.
+- **Cloud Functions** for real rate limiting and tamper-proof counters
+  (right now a technically sophisticated user could call the same
+  increment writes the app uses without actually posting/reporting) —
+  needs the Blaze (pay-as-you-go) plan, though usage at small scale is
+  normally still within the free tier's usage-based allowance.

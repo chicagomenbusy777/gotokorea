@@ -27,7 +27,34 @@
 <div class="page">
   <div class="hero">
     <h1>투표</h1>
-    <p>운영진이 직접 큐레이션한 현안 투표입니다. 한 사람당 한 번만 투표할 수 있으며, 투표 후 실시간 결과를 볼 수 있습니다.</p>
+    <p>운영진이 직접 큐레이션한 현안 투표입니다. 투표에 참여하려면 게시글을 10개 이상 작성해야 합니다. 한 사람당 한 번만 투표할 수 있으며, 투표 후 실시간 결과를 볼 수 있습니다.</p>
+  </div>
+
+  <!-- ===== Admin area: hidden unless signed in with the admin email/password account ===== -->
+  <div class="glass card" id="adminLoginCard">
+    <h3>관리자</h3>
+    <div class="form-row" id="adminLoginForm">
+      <input type="text" id="adminEmail" placeholder="관리자 이메일">
+      <input type="password" id="adminPassword" placeholder="비밀번호">
+      <button class="btn small" id="adminLoginBtn">로그인</button>
+    </div>
+    <p style="margin:8px 0 0; font-size:11.5px; color:var(--text-2);">투표를 직접 만들려면 Firebase 콘솔에서 만든 관리자 계정으로 로그인하세요. (SETUP.md 참고)</p>
+  </div>
+
+  <div class="glass card" id="adminPanel" style="display:none;">
+    <h3>관리자로 로그인됨 — <span id="adminEmailLabel"></span> <button class="btn ghost small" id="adminLogoutBtn" style="margin-left:8px;">로그아웃</button></h3>
+    <div class="form-col" id="newPollForm" style="margin-top:10px;">
+      <input type="text" id="pollTitle" placeholder="투표 제목" maxlength="120">
+      <textarea id="pollDesc" rows="2" placeholder="설명 (선택)" maxlength="500"></textarea>
+      <div id="pollOptionInputs" class="form-col">
+        <input type="text" class="poll-option-input" placeholder="옵션 1" maxlength="80">
+        <input type="text" class="poll-option-input" placeholder="옵션 2" maxlength="80">
+      </div>
+      <div class="action-row">
+        <button class="btn ghost small" id="addOptionBtn">+ 옵션 추가</button>
+      </div>
+      <button class="btn" id="createPollBtn">투표 시작</button>
+    </div>
   </div>
 
   <div id="pollList" style="display:flex; flex-direction:column; gap:16px;"></div>
