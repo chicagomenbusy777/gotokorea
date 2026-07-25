@@ -155,7 +155,11 @@ service cloud.firestore {
     }
 
     match /votes/{voteId} {
-      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      // resource is null when the vote doc doesn't exist yet (i.e. this
+      // user hasn't voted on this poll) — must short-circuit on that before
+      // touching resource.data, or the rule errors out as "permission
+      // denied" instead of a normal "not found" read.
+      allow read: if isSignedIn() && (resource == null || resource.data.uid == request.auth.uid);
       allow create: if isSignedIn()
         && request.resource.data.uid == request.auth.uid
         && voteId == request.resource.data.pollId + '_' + request.auth.uid
