@@ -80,20 +80,30 @@
   function loadPolls(){
     els.list.innerHTML = "<div class=\"empty-state\">불러오는 중...</div>";
     authReady.then(function(user){
-      return db.collection("polls").where("active","==",true).orderBy("createdAt","desc").get()
+      // NOTE: no server-side orderBy() — where()+orderBy() on different
+      // fields needs a Firestore composite index (see board.js for the
+      // same note); sorting client-side avoids that setup step.
+      return db.collection("polls").where("active","==",true).get()
         .then(function(snap){
           if(snap.empty){
             els.list.innerHTML = "<div class=\"empty-state\">진행 중인 투표가 없습니다.</div>";
             return;
           }
-          els.list.innerHTML = "";
           const polls = [];
           snap.forEach(function(doc){ polls.push({ id: doc.id, data: doc.data() }); });
+          polls.sort(function(a,b){
+            const ta = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+            const tb = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+            return tb - ta;
+          });
           return Promise.all(polls.map(function(p){
             return db.collection("votes").doc(p.id + "_" + user.uid).get().then(function(voteDoc){
-              renderPoll(p.id, p.data, voteDoc.exists ? voteDoc.data().optionKey : null);
+              return { poll: p, myVote: voteDoc.exists ? voteDoc.data().optionKey : null };
             });
-          }));
+          })).then(function(results){
+            els.list.innerHTML = "";
+            results.forEach(function(r){ renderPoll(r.poll.id, r.poll.data, r.myVote); });
+          });
         });
     }).catch(function(err){
       console.error(err);

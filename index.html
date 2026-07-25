@@ -52,6 +52,26 @@
     <strong>안내</strong>
     이 사이트는 브라우저 방문자를 위한 익명 참여 커뮤니티입니다. 게시된 모든 의견은 작성자 개인의 견해이며 GotoKorea 운영진의 입장이 아닙니다. 이용 전 <a href="guidelines.html">이용규칙</a>을 꼭 확인해주세요.
   </div>
+
+  <div class="glass card">
+    <h2>최근 게시글</h2>
+    <p style="margin:-6px 0 12px; font-size:12.5px; color:var(--text-1);">자유게시판·시사토론을 합쳐서 최신 글을 보여줍니다.</p>
+    <ul class="post-list" id="recentPosts"><li class="empty-state">불러오는 중...</li></ul>
+  </div>
+
+  <div class="glass card">
+    <h2>주요 정치 계정 (X)</h2>
+    <p style="margin:-6px 0 12px; font-size:12.5px; color:var(--text-1);">X(트위터)의 공식 임베드로 표시되는 실제 계정입니다 — GotoKorea가 대신 작성하거나 편집하지 않은 원문 그대로입니다.</p>
+    <div class="x-timeline-row">
+      <div class="x-timeline-card">
+        <a class="twitter-timeline" data-height="420" data-theme="dark" href="https://twitter.com/WhiteHouse?ref_src=twsrc%5Etfw">Tweets by WhiteHouse</a>
+      </div>
+      <div class="x-timeline-card">
+        <a class="twitter-timeline" data-height="420" data-theme="dark" href="https://twitter.com/realDonaldTrump?ref_src=twsrc%5Etfw">Tweets by realDonaldTrump</a>
+      </div>
+    </div>
+    <p style="margin:10px 0 0; font-size:11.5px; color:var(--text-2);">CCTV·BRICS 계정은 정확한 공식 핸들 확인 후 추가 예정입니다.</p>
+  </div>
 </div>
 
 <footer class="site-footer">
@@ -67,8 +87,17 @@
   .link-card{ display:block; color:inherit; text-decoration:none; transition: transform .2s var(--ease); }
   .link-card:hover{ transform:translateY(-3px); text-decoration:none; }
   .link-card p{ margin:0; font-size:13px; color:var(--text-1); line-height:1.6; }
+  .x-timeline-row{ display:flex; gap:14px; overflow-x:auto; padding-bottom:4px; }
+  .x-timeline-card{ flex:0 0 320px; max-width:100%; border-radius:var(--radius-md); overflow:hidden; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); }
 </style>
 
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="firebase-init.js"></script>
 <script src="common.js"></script>
+<script src="home.js"></script>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 </body>
 </html>

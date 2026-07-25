@@ -64,17 +64,28 @@
   function loadPosts(){
     if(unsubscribeList) unsubscribeList();
     els.list.innerHTML = "<li class=\"empty-state\">불러오는 중...</li>";
+    // NOTE: intentionally no server-side orderBy() here. Combining an
+    // equality where() with orderBy() on a different field requires a
+    // Firestore composite index (created once, manually, in the console) —
+    // without it Firestore throws "the query requires an index" and every
+    // post silently fails to load. Sorting client-side avoids that
+    // dependency entirely; fine at this site's scale.
     unsubscribeList = db.collection("posts")
       .where("category", "==", currentCategory)
-      .orderBy("createdAt", "desc")
-      .limit(50)
       .onSnapshot(function(snap){
         if(snap.empty){
           els.list.innerHTML = "<li class=\"empty-state\">아직 게시글이 없습니다. 첫 글을 남겨보세요.</li>";
           return;
         }
+        const docs = [];
+        snap.forEach(function(doc){ docs.push(doc); });
+        docs.sort(function(a,b){
+          const ta = a.data().createdAt ? a.data().createdAt.toMillis() : 0;
+          const tb = b.data().createdAt ? b.data().createdAt.toMillis() : 0;
+          return tb - ta;
+        });
         els.list.innerHTML = "";
-        snap.forEach(function(doc){
+        docs.slice(0, 50).forEach(function(doc){
           const p = doc.data();
           const li = document.createElement("li");
           li.className = "post-item";
@@ -87,7 +98,7 @@
         });
       }, function(err){
         console.error(err);
-        els.list.innerHTML = "<li class=\"empty-state\">게시글을 불러오지 못했습니다.</li>";
+        els.list.innerHTML = "<li class=\"empty-state\">게시글을 불러오지 못했습니다. (콘솔에서 오류 확인)</li>";
       });
   }
 
