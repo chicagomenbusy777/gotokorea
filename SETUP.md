@@ -96,25 +96,57 @@ Polls are now created from `vote.html` itself (no more console data-entry)
    good way to hide it before auth resolves — that's fine, it's useless to
    anyone without your password, and the real gate is the security rule.
 
-## 7. How the new limits work (nothing to set up — just context)
+## 7. How the moderation/limit features work (nothing to set up — just context)
 
-- **Voting requires 10+ posts.** A `userStats/{uid}` doc tracks each
-  user's post count, and `firestore.rules` blocks vote-casting below 10.
-  This is enforced server-side, not just hidden in the UI.
-- **5+ reports blocks posting.** The report button now also tallies a
-  `reportCount` on the *reported post's author*, and `firestore.rules`
-  rejects new posts/comments once that hits 5. There's no in-app appeal
-  flow yet — if someone's wrongly banned, you'd currently need to edit
-  their `userStats/{uid}` doc's `reportCount` back down in the console.
-- Neither counter is retroactive — only posts/reports made after this
-  update count.
+- **Voting requires 10+ posts** (the admin account is exempt). A
+  `userStats/{uid}` doc tracks each user's post count, and
+  `firestore.rules` blocks vote-casting below 10 server-side.
+- **5+ reports blocks posting/commenting.** The report button tallies a
+  `reportCount` on the *reported post's author*; `firestore.rules` rejects
+  new posts/comments once that hits 5.
+- **Comments: 1 per post per 30 minutes**, per user. Enforced via a
+  `commentCooldowns/{uid}/posts/{postId}` timestamp checked server-side.
+- **Adult/gambling/scam links or keywords are blocked at submission** (in
+  `spam-filter.js` client-side, and mirrored server-side in
+  `firestore.rules`' `hasBannedContent()` so it can't be bypassed) and the
+  poster is immediately flagged `suspended` on their `userStats` doc,
+  blocking further posts/comments. **This is a keyword/domain blocklist,
+  not a real threat-intel service** — expect some false negatives (new
+  spam domains it doesn't recognize) and occasional false positives (e.g.
+  a legitimate post discussing gambling-addiction policy). There's no
+  in-app appeal yet for any of these — a wrongly-flagged user needs you to
+  edit their `userStats/{uid}` doc in the console (set `suspended` to
+  `false` and/or lower `reportCount`).
+- None of these are retroactive — only activity after this update counts.
 
-## 8. Deploy
+## 8. (Optional) Ad monetization — Google AdSense
+
+Not required to launch. Ad slot containers already exist in the pages
+(hidden by default) and `ads.js` is wired up to activate them once
+configured:
+
+1. Sign up at https://www.google.com/adsense and add this site. **New,
+   low-traffic sites are often not approved immediately** — AdSense
+   generally wants original content and some real traffic history first,
+   so don't expect instant approval.
+2. Once approved, copy `ads-config.js.example` to `ads-config.js` and put
+   your real publisher ID (`ca-pub-...`) in it — this is from your own
+   AdSense dashboard, never something to guess or reuse from elsewhere.
+3. `ads-config.js` is gitignored; commit it anyway if you want the live
+   site to pick it up (same reasoning as `firebase-config.js` — it's a
+   client-side identifier, not a secret).
+4. Political content specifically: general political discussion is fine
+   under AdSense's policies, but review Google's policies on "dangerous or
+   derogatory content" — the CCP corner's no-ethnic-hate-speech rule
+   (already in `guidelines.html`) is also what keeps that section
+   ad-policy-safe, so keep enforcing it.
+
+## 9. Deploy
 
 Same as mindcareapp: push to `main`, enable GitHub Pages (Settings → Pages
 → Deploy from branch → `main` / root) if not already on.
 
-## 9. Optional hardening (v2 ideas, not required to launch)
+## 10. Optional hardening (v2 ideas, not required to launch)
 
 - **Firebase App Check** — reduces abuse from scripted/bot traffic hitting
   your Firestore directly. Free, a bit more setup (reCAPTCHA v3 site key).

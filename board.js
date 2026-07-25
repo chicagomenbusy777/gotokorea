@@ -51,7 +51,8 @@
 
   function checkBanStatus(uid){
     return db.collection("userStats").doc(uid).get().then(function(doc){
-      isBanned = doc.exists && Number(doc.data().reportCount || 0) >= 5;
+      const d = doc.exists ? doc.data() : {};
+      isBanned = Number(d.reportCount || 0) >= 5 || d.suspended === true;
       applyBanState();
     }).catch(function(err){ console.error(err); });
   }
@@ -111,7 +112,7 @@
           li.innerHTML =
             "<div class=\"title\">" + escapeHtml(p.title) + "</div>" +
             "<div class=\"excerpt\">" + escapeHtml((p.body||"").slice(0,80)) + "</div>" +
-            "<div class=\"meta\"><span>" + escapeHtml(p.authorNickname||"익명") + "</span><span>" + fmtDate(p.createdAt) + "</span></div>";
+            "<div class=\"meta\"><span>" + escapeHtml(p.authorNickname||"익명") + "</span><span>" + timeAgo(p.createdAt) + "</span></div>";
           li.addEventListener("click", function(){ location.hash = "post-" + doc.id; });
           els.list.appendChild(li);
         });
@@ -128,6 +129,11 @@
       if(!title || !body){ toast("제목과 내용을 입력해주세요"); return; }
       if(title.length > 120){ toast("제목은 120자 이내로 입력해주세요"); return; }
       if(body.length > 5000){ toast("내용은 5000자 이내로 입력해주세요"); return; }
+      if(containsBannedContent(title) || containsBannedContent(body)){
+        toast("음란·도박·사기성 링크나 키워드가 감지되어 등록이 차단되었습니다. 계정이 제한됩니다.");
+        authReady.then(function(user){ flagSelfSuspended(user.uid); checkBanStatus(user.uid); });
+        return;
+      }
       els.submitBtn.disabled = true;
       authReady.then(function(user){
         return db.collection("posts").add({
@@ -174,7 +180,7 @@
       const p = doc.data();
       currentPostAuthorUid = p.authorUid;
       els.detailTitle.textContent = p.title;
-      els.detailMeta.textContent = (p.authorNickname||"익명") + " · " + fmtDate(p.createdAt);
+      els.detailMeta.textContent = (p.authorNickname||"익명") + " · " + timeAgo(p.createdAt);
       els.detailBody.textContent = p.body;
     });
 
@@ -187,7 +193,7 @@
           const li = document.createElement("li");
           li.className = "comment-item";
           li.innerHTML =
-            "<div class=\"meta\">" + escapeHtml(c.authorNickname||"익명") + " · " + fmtDate(c.createdAt) + "</div>" +
+            "<div class=\"meta\">" + escapeHtml(c.authorNickname||"익명") + " · " + timeAgo(c.createdAt) + "</div>" +
             "<div>" + escapeHtml(c.body) + "</div>";
           els.commentList.appendChild(li);
         });
@@ -209,17 +215,40 @@
       if(!body){ toast("댓글 내용을 입력해주세요"); return; }
       if(body.length > 1000){ toast("댓글은 1000자 이내로 입력해주세요"); return; }
       if(!currentPostId) return;
+      if(containsBannedContent(body)){
+        toast("음란·도박·사기성 링크나 키워드가 감지되어 등록이 차단되었습니다. 계정이 제한됩니다.");
+        authReady.then(function(user){ flagSelfSuspended(user.uid); checkBanStatus(user.uid); });
+        return;
+      }
       els.commentBtn.disabled = true;
+      const postId = currentPostId;
       authReady.then(function(user){
-        return db.collection("posts").doc(currentPostId).collection("comments").add({
-          body: body,
-          authorNickname: getNickname(),
-          authorUid: user.uid,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        const cooldownRef = db.collection("commentCooldowns").doc(user.uid).collection("posts").doc(postId);
+        return cooldownRef.get().then(function(cdDoc){
+          if(cdDoc.exists){
+            const last = cdDoc.data().lastCommentAt;
+            const elapsedMs = last && last.toMillis ? (Date.now() - last.toMillis()) : Infinity;
+            if(elapsedMs < 30*60*1000){
+              const waitMin = Math.ceil((30*60*1000 - elapsedMs) / 60000);
+              toast("이 글에는 " + waitMin + "분 후에 다시 댓글을 달 수 있습니다");
+              return Promise.reject(new Error("cooldown"));
+            }
+          }
+          const commentRef = db.collection("posts").doc(postId).collection("comments").doc();
+          const batch = db.batch();
+          batch.set(commentRef, {
+            body: body,
+            authorNickname: getNickname(),
+            authorUid: user.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          batch.set(cooldownRef, { lastCommentAt: firebase.firestore.FieldValue.serverTimestamp() });
+          return batch.commit();
         });
       }).then(function(){
         els.commentInput.value = "";
       }).catch(function(err){
+        if(err && err.message === "cooldown") return;
         console.error(err);
         toast("댓글 등록에 실패했습니다: " + err.message);
       }).finally(function(){

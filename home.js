@@ -25,9 +25,9 @@
       li.className = "post-item";
       const page = CATEGORY_PAGE[p.category] || "board.html";
       li.innerHTML =
-        "<div class=\"title\">[" + escapeHtml(CATEGORY_LABEL[p.category] || p.category) + "] " + escapeHtml(p.title) + "</div>" +
+        "<div class=\"title\">" + escapeHtml(p.title) + "</div>" +
         "<div class=\"excerpt\">" + escapeHtml((p.body||"").slice(0,80)) + "</div>" +
-        "<div class=\"meta\"><span>" + escapeHtml(p.authorNickname||"익명") + "</span><span>" + fmtDate(p.createdAt) + "</span></div>";
+        "<div class=\"meta\"><span class=\"category-badge\">" + escapeHtml(CATEGORY_LABEL[p.category] || p.category) + "</span><span>" + escapeHtml(p.authorNickname||"익명") + " · " + timeAgo(p.createdAt) + "</span></div>";
       li.addEventListener("click", function(){ location.href = page + "#post-" + doc.id; });
       els.recent.appendChild(li);
     });

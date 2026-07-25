@@ -28,6 +28,25 @@
     return d.toLocaleString("ko-KR", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
   };
 
+  // Relative time ("5분 전", "3시간 전", "2일 전") like Reddit/X/Facebook
+  // list views use — falls back to the absolute date past ~30 days.
+  window.timeAgo = function(date){
+    if(!date) return "";
+    const d = date.toDate ? date.toDate() : new Date(date);
+    if(isNaN(d)) return "";
+    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if(diffSec < 5) return "방금 전";
+    if(diffSec < 60) return diffSec + "초 전";
+    const diffMin = Math.floor(diffSec / 60);
+    if(diffMin < 60) return diffMin + "분 전";
+    const diffHour = Math.floor(diffMin / 60);
+    if(diffHour < 24) return diffHour + "시간 전";
+    const diffDay = Math.floor(diffHour / 24);
+    if(diffDay < 7) return diffDay + "일 전";
+    if(diffDay < 30) return Math.floor(diffDay / 7) + "주 전";
+    return window.fmtDate(date);
+  };
+
   document.addEventListener("DOMContentLoaded", function(){
     const menuBtn = document.getElementById("menuBtn");
     const nav = document.getElementById("topNav");

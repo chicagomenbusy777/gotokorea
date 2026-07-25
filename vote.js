@@ -33,6 +33,11 @@
 
   let myPostCount = 0;
 
+  function isCurrentUserAdmin(){
+    const user = firebase.auth().currentUser;
+    return !!(user && !user.isAnonymous);
+  }
+
   function renderPoll(pollId, poll, myVote){
     const wrap = document.createElement("div");
     wrap.className = "glass card";
@@ -56,7 +61,7 @@
       });
       html += "<div style=\"font-size:11.5px;color:var(--text-2);margin-top:10px;\">총 " + totalVotes + "표 참여</div>";
       wrap.innerHTML = html;
-    } else if(myPostCount < VOTE_POST_MIN){
+    } else if(myPostCount < VOTE_POST_MIN && !isCurrentUserAdmin()){
       html += "<p style=\"font-size:13px;color:var(--text-1);\">투표하려면 게시글을 " + VOTE_POST_MIN + "개 이상 작성해야 합니다. (현재 " + myPostCount + "/" + VOTE_POST_MIN + "개) <a href=\"board.html\">글쓰러 가기 →</a></p>";
       wrap.innerHTML = html;
     } else {

@@ -1,27 +1,24 @@
 rules_version = '2';
 // GotoKorea Firestore security rules — v1.
 //
-// >>> SET THIS to the email of the one admin account you create in
-// Firebase console → Authentication (see SETUP.md "Admin account" step).
-// Everyone else authenticates anonymously, so checking the signed-in
-// user's email is enough to gate admin-only actions without needing
-// custom claims / Cloud Functions.
+// Admin: chicagomenbusy@gmail.com (only the EMAIL lives here — Firebase
+// Auth stores the password itself, hashed, on Google's servers; it is
+// never written into this file, the app's code, or the repo).
 //
-// NOTE on rate limiting: true server-enforced rate limiting (e.g. "max 1
-// post per 30s per user") would need either a per-user `rateLimits/{uid}`
-// document checked against `request.time` on every write, or Cloud
-// Functions / App Check. Neither is wired up in v1 to keep this on
-// Firebase's free Spark plan with no Cloud Functions. The client applies a
-// soft cooldown, but a determined abuser could bypass it — moderate via
-// the Firebase console (delete offending docs) and revisit if abuse shows
-// up. See SETUP.md.
+// NOTE on rate limiting: true server-enforced rate limiting beyond what's
+// implemented below (comment cooldown, vote/post gates) would need Cloud
+// Functions / App Check, not available on the free Spark plan. See the
+// per-feature notes below for what is and isn't tamper-proof.
 //
-// NOTE on userStats: postCount only increments through the app's own
-// post-creation code path, and nothing here cryptographically proves a
-// given increment came from a real post — a technically sophisticated
-// user could call the same increment write directly. Real tamper-proofing
-// would need a Cloud Functions trigger on posts/{postId} onCreate. Good
-// enough for v1's threat model (casual abuse, not a determined attacker).
+// NOTE on userStats: postCount/reportCount/suspended only change through
+// the app's own code paths, and nothing here cryptographically proves a
+// given write came from a real post/report/violation — a technically
+// sophisticated user calling the Firestore API directly (bypassing the
+// app's JS) could skip the "honest" side-effect writes. The content
+// filter below (hasBannedContent) is the one part of this that IS fully
+// server-enforced and can't be bypassed that way. Good enough for v1's
+// threat model (casual abuse, not a determined attacker); real
+// tamper-proofing needs Cloud Functions triggers.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -31,11 +28,20 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == "ADMIN_EMAIL_PLACEHOLDER";
+      return isSignedIn() && request.auth.token.email == "chicagomenbusy@gmail.com";
     }
 
     function withinLength(field, maxLen) {
       return field is string && field.size() > 0 && field.size() <= maxLen;
+    }
+
+    // Blocks obvious adult/gambling-site links or keywords in post/comment
+    // bodies. Deliberately small and high-confidence here (server-enforced,
+    // can't be bypassed) — the fuller, more aggressive blocklist lives
+    // client-side in spam-filter.js where it's easier to iterate on without
+    // risking a rules syntax mistake blocking all posting.
+    function hasBannedContent(text) {
+      return text.matches('(?i).*(porn|xxx\\.|adult-|casino|bet365|카지노|도박|토토|먹튀|배팅|베팅|성인광고|야동).*');
     }
 
     function statsOf(uid) {
@@ -54,31 +60,51 @@ service cloud.firestore {
       return hasStats(uid) ? statsOf(uid).reportCount : 0;
     }
 
-    function notBanned(uid) {
-      return reportCountOf(uid) < 5;
+    function isSuspended(uid) {
+      return hasStats(uid) && statsOf(uid).get('suspended', false) == true;
     }
 
-    // ---------- Per-user stats: post count (for the vote gate) and
-    // report count (for the posting ban). One doc per uid. ----------
+    function notBanned(uid) {
+      return reportCountOf(uid) < 5 && !isSuspended(uid);
+    }
+
+    function canCommentOnTarget(uid, targetId) {
+      return !exists(/databases/$(database)/documents/commentCooldowns/$(uid)/posts/$(targetId))
+        || request.time > get(/databases/$(database)/documents/commentCooldowns/$(uid)/posts/$(targetId)).data.lastCommentAt + duration.value(30, 'm');
+    }
+
+    // ---------- Per-user stats: post count (vote gate), report count and
+    // suspended flag (posting ban). One doc per uid. ----------
     match /userStats/{uid} {
       allow read: if true;
-      // Self: only the post-creation path increments postCount, by exactly 1,
-      // and never touches reportCount.
       allow create: if isSignedIn() && request.auth.uid == uid
         && request.resource.data.postCount == 1
         && request.resource.data.reportCount == 0;
       allow update: if isSignedIn() && (
+        // Self, via the post-creation path: postCount +1 only.
         (request.auth.uid == uid
           && request.resource.data.postCount == resource.data.postCount + 1
           && request.resource.data.reportCount == resource.data.reportCount)
         ||
-        // Anyone else: only the report-creation path increments reportCount,
-        // by exactly 1, and never touches postCount.
+        // Anyone else, via the report button: reportCount +1 only.
         (request.auth.uid != uid
           && request.resource.data.reportCount == resource.data.reportCount + 1
           && request.resource.data.postCount == resource.data.postCount)
+        ||
+        // Self, after attempting to post a banned link: flip suspended only.
+        (request.auth.uid == uid
+          && request.resource.data.suspended == true
+          && request.resource.data.postCount == resource.data.postCount
+          && request.resource.data.reportCount == resource.data.reportCount)
       );
       allow delete: if false;
+    }
+
+    // ---------- Per-user, per-thread comment cooldown (30 min) ----------
+    match /commentCooldowns/{uid}/posts/{targetId} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.lastCommentAt == request.time;
     }
 
     // ---------- Posts (자유게시판 + 시사/정치 + CCP corner) ----------
@@ -91,6 +117,8 @@ service cloud.firestore {
         && withinLength(request.resource.data.title, 120)
         && withinLength(request.resource.data.body, 5000)
         && withinLength(request.resource.data.authorNickname, 30)
+        && !hasBannedContent(request.resource.data.title)
+        && !hasBannedContent(request.resource.data.body)
         && request.resource.data.createdAt == request.time;
       // No in-app edit/delete in v1 — moderation happens in the Firebase console.
       allow update, delete: if false;
@@ -99,9 +127,11 @@ service cloud.firestore {
         allow read: if true;
         allow create: if isSignedIn()
           && notBanned(request.auth.uid)
+          && canCommentOnTarget(request.auth.uid, postId)
           && request.resource.data.authorUid == request.auth.uid
           && withinLength(request.resource.data.body, 1000)
           && withinLength(request.resource.data.authorNickname, 30)
+          && !hasBannedContent(request.resource.data.body)
           && request.resource.data.createdAt == request.time;
         allow update, delete: if false;
       }
@@ -129,7 +159,7 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.uid == request.auth.uid
         && voteId == request.resource.data.pollId + '_' + request.auth.uid
-        && postCountOf(request.auth.uid) >= 10;
+        && (isAdmin() || postCountOf(request.auth.uid) >= 10);
       allow update, delete: if false;
     }
 
@@ -142,6 +172,8 @@ service cloud.firestore {
         && withinLength(request.resource.data.description, 3000)
         && request.resource.data.goal is number
         && request.resource.data.goal > 0
+        && !hasBannedContent(request.resource.data.title)
+        && !hasBannedContent(request.resource.data.description)
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
 
@@ -156,9 +188,11 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if isSignedIn()
+          && canCommentOnTarget(request.auth.uid, petitionId)
           && request.resource.data.authorUid == request.auth.uid
           && withinLength(request.resource.data.body, 1000)
           && withinLength(request.resource.data.authorNickname, 30)
+          && !hasBannedContent(request.resource.data.body)
           && request.resource.data.createdAt == request.time;
         allow update, delete: if false;
       }

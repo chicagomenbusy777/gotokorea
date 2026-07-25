@@ -1,0 +1,7 @@
+// Copy this file to ads-config.js (same folder) once you have a real
+// Google AdSense account and have been approved for this site.
+// Never fabricate/guess a publisher ID — it must be the exact one shown
+// in your own AdSense dashboard (Account → Settings → Account information).
+window.ADS_CONFIG = {
+  client: "ca-pub-XXXXXXXXXXXXXXXX" // your AdSense publisher ID
+};
