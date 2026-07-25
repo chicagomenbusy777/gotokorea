@@ -10,8 +10,11 @@
   if(typeof window.FIREBASE_CONFIG === "undefined"){
     document.addEventListener("DOMContentLoaded", function(){
       const el = document.createElement("div");
-      el.style.cssText = "position:fixed;inset:0;background:#0A0D14;color:#F2F3F6;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:sans-serif;z-index:9999;";
-      el.innerHTML = "<div>firebase-config.js가 없습니다.<br>SETUP.md의 안내에 따라 Firebase 프로젝트를 연결해주세요.</div>";
+      el.style.cssText = "position:fixed;inset:0;background:#0A0D14;color:#F2F3F6;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:sans-serif;z-index:9999;line-height:1.7;";
+      el.innerHTML =
+        "<div>firebase-config.js가 아직 연결되지 않았습니다.<br>" +
+        "Firebase 프로젝트 연결 안내를 확인해주세요 (약 10분 소요):<br>" +
+        "<a href=\"https://github.com/chicagomenbusy777/gotokorea/blob/main/SETUP.md\" style=\"color:#4FC1E9;\" target=\"_blank\" rel=\"noopener\">SETUP.md 보기 →</a></div>";
       document.body.appendChild(el);
     });
     throw new Error("Missing firebase-config.js — see SETUP.md");
