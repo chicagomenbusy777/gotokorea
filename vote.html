@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>투표 — GotoKorea</title>
+<meta name="description" content="GotoKorea 투표 — 운영진이 큐레이션한 현안 투표에 참여하고 실시간 결과를 확인하세요. 자동 수집이 아닌 수동 큐레이션 방식입니다.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Goto<span>Korea</span></div>
+  <button class="menu-btn" id="menuBtn">☰</button>
+  <nav id="topNav">
+    <a href="index.html">홈</a>
+    <a href="board.html">자유게시판</a>
+    <a href="issues.html">시사·정치</a>
+    <a href="vote.html" class="active">투표</a>
+    <a href="petition.html">청원</a>
+    <a href="guidelines.html">이용규칙</a>
+  </nav>
+  <div class="topbar-spacer"></div>
+  <button class="btn small ghost" id="nicknameBtn">닉네임</button>
+</header>
+
+<div class="page">
+  <div class="hero">
+    <h1>투표</h1>
+    <p>운영진이 직접 큐레이션한 현안 투표입니다. 한 사람당 한 번만 투표할 수 있으며, 투표 후 실시간 결과를 볼 수 있습니다.</p>
+  </div>
+
+  <div id="pollList" style="display:flex; flex-direction:column; gap:16px;"></div>
+</div>
+
+<footer class="site-footer">
+  GotoKorea는 커뮤니티가 자체 운영하는 비공식 플랫폼이며 대한민국 정부·공공기관과 무관합니다.
+  <a href="guidelines.html">이용규칙 및 콘텐츠 정책</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="firebase-init.js"></script>
+<script src="common.js"></script>
+<script src="vote.js"></script>
+</body>
+</html>

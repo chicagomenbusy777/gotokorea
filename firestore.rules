@@ -1,0 +1,102 @@
+rules_version = '2';
+// GotoKorea Firestore security rules — v1.
+//
+// NOTE on rate limiting: true server-enforced rate limiting (e.g. "max 1
+// post per 30s per user") would need either a per-user `rateLimits/{uid}`
+// document checked against `request.time` on every write, or Cloud
+// Functions / App Check. Neither is wired up in v1 to keep this on
+// Firebase's free Spark plan with no Cloud Functions. The client applies a
+// soft cooldown, but a determined abuser could bypass it — moderate via
+// the Firebase console (delete offending docs) and revisit if abuse shows
+// up. See SETUP.md.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function withinLength(field, maxLen) {
+      return field is string && field.size() > 0 && field.size() <= maxLen;
+    }
+
+    // ---------- Posts (자유게시판 + 시사/정치 + CCP corner) ----------
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.category in ['free', 'issues', 'ccp']
+        && withinLength(request.resource.data.title, 120)
+        && withinLength(request.resource.data.body, 5000)
+        && withinLength(request.resource.data.authorNickname, 30)
+        && request.resource.data.createdAt == request.time;
+      // No in-app edit/delete in v1 — moderation happens in the Firebase console.
+      allow update, delete: if false;
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && withinLength(request.resource.data.body, 1000)
+          && withinLength(request.resource.data.authorNickname, 30)
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------- Reports (report button — owner-only reading via console) ----------
+    match /reports/{reportId} {
+      allow read: if false;
+      allow create: if isSignedIn()
+        && request.resource.data.reporterUid == request.auth.uid
+        && withinLength(request.resource.data.reason, 500);
+      allow update, delete: if false;
+    }
+
+    // ---------- Polls (curated by the site owner directly in the console) ----------
+    match /polls/{pollId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /votes/{voteId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && voteId == request.resource.data.pollId + '_' + request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ---------- Petitions ----------
+    match /petitions/{petitionId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && withinLength(request.resource.data.title, 120)
+        && withinLength(request.resource.data.description, 3000)
+        && request.resource.data.goal is number
+        && request.resource.data.goal > 0
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+
+      match /signatures/{uid} {
+        // Signature count is computed client-side from this subcollection's
+        // size — no denormalized counter to keep in sync.
+        allow read: if true;
+        allow create: if isSignedIn() && uid == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && withinLength(request.resource.data.body, 1000)
+          && withinLength(request.resource.data.authorNickname, 30)
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+  }
+}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>청원 (비공식) — GotoKorea</title>
+<meta name="description" content="GotoKorea 청원 페이지는 커뮤니티가 자체 운영하는 비공식 페이지이며, 대한민국 정부의 국민동의청원과 무관하고 법적 효력이 없습니다.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Goto<span>Korea</span></div>
+  <button class="menu-btn" id="menuBtn">☰</button>
+  <nav id="topNav">
+    <a href="index.html">홈</a>
+    <a href="board.html">자유게시판</a>
+    <a href="issues.html">시사·정치</a>
+    <a href="vote.html">투표</a>
+    <a href="petition.html" class="active">청원</a>
+    <a href="guidelines.html">이용규칙</a>
+  </nav>
+  <div class="topbar-spacer"></div>
+  <button class="btn small ghost" id="nicknameBtn">닉네임</button>
+</header>
+
+<div class="page">
+  <div class="banner">
+    <strong>⚠️ 비공식 페이지 안내</strong>
+    이 청원은 커뮤니티 자체 운영 페이지이며, 대한민국 정부의 국민동의청원과 무관하고 법적 효력이 없습니다. 서명은 뜻을 함께하는 사람의 수를 보여주는 용도일 뿐, 정부·국회에 자동으로 전달되지 않습니다.
+  </div>
+
+  <div class="hero">
+    <h1>청원</h1>
+    <p>커뮤니티 청원을 만들고 뜻을 함께하는 사람들의 서명을 모아보세요.</p>
+  </div>
+
+  <div id="petitionListView" style="display:flex; flex-direction:column; gap:18px;">
+    <div class="glass card">
+      <h3>새 청원 만들기</h3>
+      <div class="form-col" id="newPetitionForm">
+        <input type="text" id="petitionTitle" placeholder="청원 제목" maxlength="120">
+        <input type="text" id="petitionGoal" placeholder="목표 서명 수 (예: 100)">
+        <textarea id="petitionDesc" rows="4" placeholder="청원 내용을 자세히 적어주세요" maxlength="3000"></textarea>
+        <button class="btn" id="submitPetitionBtn">등록</button>
+      </div>
+    </div>
+
+    <ul class="post-list" id="petitionList"></ul>
+  </div>
+
+  <div class="post-detail glass card" id="petitionDetail" style="display:none; flex-direction:column;">
+    <button class="btn ghost small" id="petitionDetailBack" style="align-self:flex-start; margin-bottom:12px;">← 목록으로</button>
+    <div class="title" id="petitionDetailTitle"></div>
+    <div class="meta" id="petitionDetailMeta"></div>
+    <div class="body" id="petitionDetailBody"></div>
+
+    <div style="margin-top:16px;">
+      <div class="petition-count" id="petitionDetailCount">0 <span>명 서명</span></div>
+      <div class="petition-progress"><div class="petition-progress-fill" id="petitionDetailProgress" style="width:0%"></div></div>
+    </div>
+    <button class="btn" id="signBtn" style="margin-top:14px; align-self:flex-start;">서명하기</button>
+
+    <h3 style="margin-top:22px;">댓글</h3>
+    <ul class="comment-list" id="petitionCommentList"></ul>
+    <div class="form-col" style="margin-top:10px;">
+      <textarea id="petitionCommentInput" rows="2" placeholder="댓글을 입력하세요" maxlength="1000"></textarea>
+      <button class="btn small" id="petitionCommentBtn" style="align-self:flex-end;">댓글 등록</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  이 청원 페이지는 커뮤니티가 자체 운영하는 비공식 페이지이며, 대한민국 정부의 국민동의청원과 무관하고 법적 효력이 없습니다.
+  <a href="guidelines.html">이용규칙 및 콘텐츠 정책</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="firebase-init.js"></script>
+<script src="common.js"></script>
+<script src="petition.js"></script>
+</body>
+</html>

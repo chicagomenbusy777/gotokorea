@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자유게시판 — GotoKorea</title>
+<meta name="description" content="GotoKorea 자유게시판 — 주제 제한 없이 자유롭게 의견을 나누는 익명 커뮤니티 공간입니다.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Goto<span>Korea</span></div>
+  <button class="menu-btn" id="menuBtn">☰</button>
+  <nav id="topNav">
+    <a href="index.html">홈</a>
+    <a href="board.html" class="active">자유게시판</a>
+    <a href="issues.html">시사·정치</a>
+    <a href="vote.html">투표</a>
+    <a href="petition.html">청원</a>
+    <a href="guidelines.html">이용규칙</a>
+  </nav>
+  <div class="topbar-spacer"></div>
+  <button class="btn small ghost" id="nicknameBtn">닉네임</button>
+</header>
+
+<div class="page">
+  <div class="hero">
+    <h1>자유게시판</h1>
+    <p>주제 제한 없이 자유롭게 글을 남기는 공간입니다. 타인에 대한 비방·혐오 표현은 삭제될 수 있습니다.</p>
+  </div>
+
+  <div id="boardView" style="display:flex; flex-direction:column; gap:18px;">
+    <div class="filter-pills" id="categoryFilters"></div>
+
+    <div class="glass card">
+      <h3>새 글 작성</h3>
+      <div class="form-col" id="newPostForm">
+        <input type="text" id="postTitle" placeholder="제목" maxlength="120">
+        <textarea id="postBody" rows="4" placeholder="내용을 입력하세요" maxlength="5000"></textarea>
+        <button class="btn" id="submitPostBtn">등록</button>
+      </div>
+    </div>
+
+    <ul class="post-list" id="postList"></ul>
+  </div>
+
+  <div class="post-detail glass card" id="postDetail" style="display:none; flex-direction:column;">
+    <button class="btn ghost small" id="detailBack" style="align-self:flex-start; margin-bottom:12px;">← 목록으로</button>
+    <div class="title" id="detailTitle"></div>
+    <div class="meta" id="detailMeta"></div>
+    <div class="body" id="detailBody"></div>
+    <div class="action-row" style="margin-top:14px;">
+      <button class="report-link" id="detailReport">🚩 신고</button>
+    </div>
+    <h3 style="margin-top:22px;">댓글</h3>
+    <ul class="comment-list" id="commentList"></ul>
+    <div class="form-col" style="margin-top:10px;">
+      <textarea id="commentInput" rows="2" placeholder="댓글을 입력하세요" maxlength="1000"></textarea>
+      <button class="btn small" id="commentBtn" style="align-self:flex-end;">댓글 등록</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  GotoKorea는 커뮤니티가 자체 운영하는 비공식 플랫폼이며 대한민국 정부·공공기관과 무관합니다.
+  <a href="guidelines.html">이용규칙 및 콘텐츠 정책</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  window.BOARD_CONFIG = {
+    categories: [{ key:"free", label:"자유" }],
+    defaultCategory: "free"
+  };
+</script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="firebase-init.js"></script>
+<script src="common.js"></script>
+<script src="board.js"></script>
+</body>
+</html>

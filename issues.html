@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시사·정치 토론 — GotoKorea</title>
+<meta name="description" content="GotoKorea 시사·정치 토론 게시판 — 한국 사회 현안과 정치 이슈, CCP·공산당 관련 주제를 다루는 코너를 포함합니다. 정책·정당에 대한 비판은 허용되나 특정 민족·국적에 대한 혐오 표현은 금지됩니다.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Goto<span>Korea</span></div>
+  <button class="menu-btn" id="menuBtn">☰</button>
+  <nav id="topNav">
+    <a href="index.html">홈</a>
+    <a href="board.html">자유게시판</a>
+    <a href="issues.html" class="active">시사·정치</a>
+    <a href="vote.html">투표</a>
+    <a href="petition.html">청원</a>
+    <a href="guidelines.html">이용규칙</a>
+  </nav>
+  <div class="topbar-spacer"></div>
+  <button class="btn small ghost" id="nicknameBtn">닉네임</button>
+</header>
+
+<div class="page">
+  <div class="hero">
+    <h1>시사·정치 토론</h1>
+    <p>한국 사회의 현안과 정치 이슈를 토론하는 공간입니다. 정부·정당·정책에 대한 비판은 정치적 의사표현으로 허용되지만, 특정 민족이나 국적을 향한 혐오 표현은 금지됩니다.</p>
+  </div>
+
+  <div class="banner" id="ccpBanner" style="display:none;">
+    <strong>CCP·공산당 코너 이용 안내</strong>
+    이 코너는 중국공산당(CCP)의 정책·행보에 대한 시사적 토론을 위한 공간입니다.
+    정당·정부에 대한 비판은 허용되지만, 중국인 등 특정 민족·국적을 향한 혐오 발언은 금지되며 발견 시 삭제됩니다.
+    사실 주장에는 가능한 한 출처를 함께 남겨주세요. 자세한 내용은 <a href="guidelines.html">이용규칙</a>을 확인하세요.
+  </div>
+
+  <div id="boardView" style="display:flex; flex-direction:column; gap:18px;">
+    <div class="filter-pills" id="categoryFilters"></div>
+
+    <div class="glass card">
+      <h3>새 글 작성</h3>
+      <div class="form-col" id="newPostForm">
+        <input type="text" id="postTitle" placeholder="제목" maxlength="120">
+        <textarea id="postBody" rows="4" placeholder="내용을 입력하세요 (사실 주장에는 출처를 남겨주세요)" maxlength="5000"></textarea>
+        <button class="btn" id="submitPostBtn">등록</button>
+      </div>
+    </div>
+
+    <ul class="post-list" id="postList"></ul>
+  </div>
+
+  <div class="post-detail glass card" id="postDetail" style="display:none; flex-direction:column;">
+    <button class="btn ghost small" id="detailBack" style="align-self:flex-start; margin-bottom:12px;">← 목록으로</button>
+    <div class="title" id="detailTitle"></div>
+    <div class="meta" id="detailMeta"></div>
+    <div class="body" id="detailBody"></div>
+    <div class="action-row" style="margin-top:14px;">
+      <button class="report-link" id="detailReport">🚩 신고</button>
+    </div>
+    <h3 style="margin-top:22px;">댓글</h3>
+    <ul class="comment-list" id="commentList"></ul>
+    <div class="form-col" style="margin-top:10px;">
+      <textarea id="commentInput" rows="2" placeholder="댓글을 입력하세요" maxlength="1000"></textarea>
+      <button class="btn small" id="commentBtn" style="align-self:flex-end;">댓글 등록</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  GotoKorea는 커뮤니티가 자체 운영하는 비공식 플랫폼이며 대한민국 정부·공공기관과 무관합니다.
+  <a href="guidelines.html">이용규칙 및 콘텐츠 정책</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  window.BOARD_CONFIG = {
+    categories: [
+      { key:"issues", label:"일반 시사·정치" },
+      { key:"ccp", label:"CCP·공산당" }
+    ],
+    defaultCategory: "issues",
+    ccpGuidelineCategory: "ccp"
+  };
+</script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="firebase-init.js"></script>
+<script src="common.js"></script>
+<script src="board.js"></script>
+</body>
+</html>
