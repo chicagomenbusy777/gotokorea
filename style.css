@@ -74,6 +74,27 @@ a:hover{ text-decoration:underline; }
 .topbar-spacer{ flex:1; }
 .menu-btn{ display:none; background:none; border:none; color:var(--text-0); font-size:20px; cursor:pointer; }
 
+.lang-switch{ display:flex; gap:3px; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:999px; padding:3px; }
+.lang-switch button{
+  padding:6px 12px; border:none; border-radius:999px; background:transparent;
+  color:var(--text-1); font-size:11.5px; font-weight:700; cursor:pointer;
+  transition: background .2s var(--ease), color .2s var(--ease);
+}
+.lang-switch button.active{ background:linear-gradient(135deg, var(--accent-primary), var(--accent-action)); color:#fff; }
+
+/* ============ Wide section (breaks out of the narrow .page column) ============ */
+.wide-page{ max-width:1300px; width:100%; margin:0 auto; padding:0 18px; }
+
+/* ============ Featured accounts panel ============ */
+.accounts-group{ margin-bottom:18px; }
+.accounts-group:last-child{ margin-bottom:0; }
+.accounts-group-label{ font-size:12px; font-weight:700; color:var(--text-1); text-transform:uppercase; letter-spacing:.04em; margin-bottom:10px; }
+.x-timeline-row{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; }
+.x-timeline-card{ border-radius:var(--radius-md); overflow:hidden; background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); }
+
+/* ============ Share row ============ */
+.share-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+
 @media (max-width:820px){
   .topbar nav{ display:none; flex-direction:column; width:100%; margin-top:10px; }
   .topbar nav.open{ display:flex; }

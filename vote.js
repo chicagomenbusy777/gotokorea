@@ -20,7 +20,7 @@
     wrap.className = "glass card";
 
     const optKeys = Object.keys(poll.options || {});
-    const totalVotes = optKeys.reduce(function(sum,k){ return sum + (poll.options[k].votes||0); }, 0);
+    const totalVotes = optKeys.reduce(function(sum,k){ return sum + (Number(poll.options[k].votes)||0); }, 0);
 
     let html = "<h3>" + escapeHtml(poll.title) + "</h3>";
     if(poll.description) html += "<p style=\"color:var(--text-1);font-size:13px;margin:-6px 0 12px;\">" + escapeHtml(poll.description) + "</p>";
@@ -29,10 +29,11 @@
       // Already voted: show results.
       optKeys.forEach(function(key){
         const opt = poll.options[key];
-        const pct = totalVotes ? Math.round(100*(opt.votes||0)/totalVotes) : 0;
+        const votes = Number(opt.votes) || 0;
+        const pct = totalVotes ? Math.round(100*votes/totalVotes) : 0;
         const mine = myVote === key;
         html +=
-          "<div class=\"poll-result-label\"><span>" + escapeHtml(opt.label) + (mine ? " ✓ 내 선택" : "") + "</span><span>" + pct + "% (" + (opt.votes||0) + "표)</span></div>" +
+          "<div class=\"poll-result-label\"><span>" + escapeHtml(opt.label) + (mine ? " ✓ 내 선택" : "") + "</span><span>" + pct + "% (" + votes + "표)</span></div>" +
           "<div class=\"poll-result-bar\"><div class=\"poll-result-fill\" style=\"width:" + pct + "%\"></div></div>";
       });
       html += "<div style=\"font-size:11.5px;color:var(--text-2);margin-top:10px;\">총 " + totalVotes + "표 참여</div>";
@@ -77,25 +78,35 @@
     });
   }
 
+  function toMillisSafe(ts){
+    // Defensive: if createdAt is missing, or was typed as a string/number
+    // instead of a real Firestore Timestamp in the console, .toMillis()
+    // would throw and (before this guard) silently break the whole list.
+    if(ts && typeof ts.toMillis === "function") return ts.toMillis();
+    return 0;
+  }
+
   function loadPolls(){
     els.list.innerHTML = "<div class=\"empty-state\">불러오는 중...</div>";
     authReady.then(function(user){
-      // NOTE: no server-side orderBy() — where()+orderBy() on different
-      // fields needs a Firestore composite index (see board.js for the
-      // same note); sorting client-side avoids that setup step.
-      return db.collection("polls").where("active","==",true).get()
+      // Fetch the whole collection (no where/orderBy at all) and filter +
+      // sort client-side. This sidesteps two common console mistakes:
+      // (1) where()+orderBy() on different fields needing a composite
+      // index, and (2) `active` being saved as the string "true" instead
+      // of the boolean true, which a strict where("active","==",true)
+      // query would silently fail to match.
+      return db.collection("polls").get()
         .then(function(snap){
-          if(snap.empty){
+          const polls = [];
+          snap.forEach(function(doc){
+            const data = doc.data();
+            if(data.active === true || data.active === "true") polls.push({ id: doc.id, data: data });
+          });
+          if(!polls.length){
             els.list.innerHTML = "<div class=\"empty-state\">진행 중인 투표가 없습니다.</div>";
             return;
           }
-          const polls = [];
-          snap.forEach(function(doc){ polls.push({ id: doc.id, data: doc.data() }); });
-          polls.sort(function(a,b){
-            const ta = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
-            const tb = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
-            return tb - ta;
-          });
+          polls.sort(function(a,b){ return toMillisSafe(b.data.createdAt) - toMillisSafe(a.data.createdAt); });
           return Promise.all(polls.map(function(p){
             return db.collection("votes").doc(p.id + "_" + user.uid).get().then(function(voteDoc){
               return { poll: p, myVote: voteDoc.exists ? voteDoc.data().optionKey : null };
@@ -107,7 +118,7 @@
         });
     }).catch(function(err){
       console.error(err);
-      els.list.innerHTML = "<div class=\"empty-state\">투표 목록을 불러오지 못했습니다.</div>";
+      els.list.innerHTML = "<div class=\"empty-state\">투표 목록을 불러오지 못했습니다. (콘솔에서 오류 확인: " + err.message + ")</div>";
     });
   }
 
